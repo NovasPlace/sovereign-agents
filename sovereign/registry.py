@@ -305,6 +305,7 @@ class AgentRegistry:
                 "skill":            defn.skill,
                 "lora_adapter":     defn.lora_adapter,
                 "tools":            defn.tools,
+                "system_prompt":    defn.system_prompt,
                 "friction_heat":    defn.friction_heat,
                 "cooling_constant": defn.cooling_constant,
                 "status":           runtime.status      if runtime else "idle",
