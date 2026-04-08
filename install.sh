@@ -64,8 +64,14 @@ fi
 hdr "Step 2 — Seed schema"
 
 SCHEMA_FILE="${CORTEX_DIR}/cortex/schema.sql"
+
+if [[ ! -d "$CORTEX_DIR" ]]; then
+    info "living-mind-cortex not found at ${CORTEX_DIR}. Cloning..."
+    git clone https://github.com/NovasPlace/living-mind-cortex.git "$CORTEX_DIR" || fail "Failed to clone Cortex."
+fi
+
 if [[ ! -f "$SCHEMA_FILE" ]]; then
-    fail "Cortex schema not found at ${SCHEMA_FILE}.\n  Set CORTEX_DIR to the living-mind-cortex repo path."
+    fail "Cortex schema not found at ${SCHEMA_FILE}.\n  Verify CORTEX_DIR points to a valid living-mind-cortex repository."
 fi
 
 psql -d "${SOVEREIGN_DB}" -f "$SCHEMA_FILE" -q && ok "Cortex schema applied."
@@ -100,6 +106,7 @@ source "${VENV_DIR}/bin/activate"
 
 pip install -q --upgrade pip
 pip install -q pyyaml httpx
+pip install -q -e .
 
 # Install Cortex dependencies too
 if [[ -f "${CORTEX_DIR}/requirements.txt" ]]; then
@@ -153,6 +160,20 @@ export SOVEREIGN_AGENTS_PATH="$(pwd)"
 export DATABASE_URL="postgresql://localhost/${SOVEREIGN_DB}"
 export SOVEREIGN_LOCAL_URL="http://localhost:${SERVER_PORT}"
 
+# Persist environment configuration
+mkdir -p ~/.config/sovereign
+cat <<EOF > ~/.config/sovereign/.env
+SOVEREIGN_AGENTS_DIR="${SOVEREIGN_AGENTS_PATH}/agents"
+SOVEREIGN_AGENTS_PATH="${SOVEREIGN_AGENTS_PATH}"
+DATABASE_URL="${DATABASE_URL}"
+SOVEREIGN_SERVER="${SOVEREIGN_LOCAL_URL}"
+CORTEX_DIR="${CORTEX_DIR}"
+EOF
+info "Persisted configuration to ~/.config/sovereign/.env"
+
+# Create logs dir BEFORE nohup
+mkdir -p "${OLDPWD}/logs"
+
 # Check if server is already running
 if curl -sf "http://localhost:${SERVER_PORT}/status" &>/dev/null; then
     ok "Server already running at http://localhost:${SERVER_PORT}"
@@ -186,7 +207,6 @@ fi
 # Confirm sovereign list returns agents
 hdr "Confirming install"
 
-mkdir -p logs
 python3 -m sovereign.cli list --server "http://localhost:${SERVER_PORT}" 2>/dev/null || \
     warn "sovereign list failed — server may still be warming up. Run: sovereign list"
 

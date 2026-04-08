@@ -27,6 +27,17 @@ import sys
 import textwrap
 from pathlib import Path
 
+# ── Native .env Loader ───────────────────────────────────────────────────────
+_env_file = Path(os.path.expanduser("~/.config/sovereign/.env"))
+if _env_file.exists():
+    for _line in _env_file.read_text(encoding="utf-8").splitlines():
+        if _line.strip() and not _line.startswith("#"):
+            try:
+                _k, _v = _line.split("=", 1)
+                os.environ.setdefault(_k.strip(), _v.strip())
+            except ValueError:
+                pass
+
 # ── Optional httpx for online commands ──────────────────────────────────────
 try:
     import httpx
@@ -37,9 +48,14 @@ except ImportError:
 # ── Config ───────────────────────────────────────────────────────────────────
 DEFAULT_SERVER   = os.environ.get("SOVEREIGN_SERVER", "http://localhost:8008")
 DEFAULT_AGENTS   = os.environ.get("SOVEREIGN_AGENTS_DIR", "./agents")
+
+_default_cortex = os.environ.get(
+    "CORTEX_DIR", 
+    str(Path(__file__).parent.parent.parent / "living-mind-cortex")
+)
 BENCHMARK_SCRIPT = os.environ.get(
     "SOVEREIGN_BENCH_SCRIPT",
-    str(Path(__file__).parent.parent / "benchmark_memory.py"),
+    str(Path(_default_cortex) / "benchmark_memory.py"),
 )
 
 AGENT_YAML_TEMPLATE = """\
