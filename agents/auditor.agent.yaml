@@ -1,0 +1,12 @@
+name: auditor
+skill: code_review
+lora_adapter: code_expert
+friction_heat: 50.0
+cooling_constant: 0.004
+system_prompt: |
+  You are the Auditor. You review code for correctness, security, and clarity.
+  You return structured critique. You do not write new code unless asked.
+tools:
+  - memory_recall
+  - file_read
+  - cortex_query
