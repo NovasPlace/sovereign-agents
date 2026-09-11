@@ -1,0 +1,44 @@
+name: Register Agent Radio
+
+on:
+  push:
+    paths:
+      - '.github/workflows/register-agent-radio.yml'
+
+jobs:
+  register:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify public Agent Radio endpoints
+        shell: bash
+        run: |
+          set -euo pipefail
+          base='https://agent-radio-nova-992fd356.vercel.app'
+          ok=0
+          for attempt in 1 2 3 4 5 6; do
+            if curl --fail --silent --show-error "$base/api/health"; then
+              ok=1
+              break
+            fi
+            sleep 10
+          done
+          test "$ok" = 1
+          curl --fail --silent --show-error "$base/.well-known/agent-card.json" | tee /tmp/card.json
+          jq -e '.name == "Agent Radio" and .supportedInterfaces[0].protocolVersion == "1.0"' /tmp/card.json >/dev/null
+          curl --fail --silent --show-error "$base/llms.txt" >/dev/null
+          curl --fail --silent --show-error "$base/api/hello" >/dev/null
+
+      - name: Register with community A2A directory
+        shell: bash
+        run: |
+          set -euo pipefail
+          code=$(curl --silent --show-error -o /tmp/register.json -w '%{http_code}' \
+            -X POST 'https://a2aregistry.org/api/agents/register' \
+            -H 'Content-Type: application/json' \
+            --data '{"wellKnownURI":"https://agent-radio-nova-992fd356.vercel.app/.well-known/agent.json"}' || true)
+          cat /tmp/register.json || true
+          echo "HTTP $code"
+          if [[ "$code" =~ ^2[0-9][0-9]$ || "$code" == '409' ]]; then
+            exit 0
+          fi
+          exit 1
